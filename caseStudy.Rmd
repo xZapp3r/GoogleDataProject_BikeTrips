@@ -1,0 +1,209 @@
+---
+title: "CaseStudy"
+author: "Breno"
+date: "2023-09-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Bicicletas
+## Como um compartilhamento de bicicletas possibilita o sucesso?
+
+### Ask to answer right
+
+
+### Perguntar
+
+Três perguntas nortearão o futuro programa de marketing:
+ 
+* Como os membros anuais e os ciclistas casuais usam as bicicletas da Cyclistic de forma diferente?
+
+* Por que os passageiros casuais iriam querer adquirir planos anuais da Cyclistic?
+
+* Como a Cyclistic pode usar a mídia digital para influenciar os passageiros casuais a se tornarem membros?
+
+## Bibliotecas
+
+```{r libraries}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tibble)
+library(lubridate)
+
+
+```
+
+
+
+
+
+## Configurando diretorio
+
+Fontes de dados fornecidas em: [bicicletas_data](https://divvy-tripdata.s3.amazonaws.com/index.html)
+
+* Recolhido ano de 2021 para este estudo
+
+
+```{r setting 12 months of trips}
+#setwd('../Imagens/cases')
+
+trips <- read_csv('trips/202101-divvy-tripdata.csv')
+trips2 <- read_csv('trips/202102-divvy-tripdata.csv')
+trips3 <- read_csv('trips/202103-divvy-tripdata.csv')
+#trips4 <- read_csv('202104-divvy-tripdata.csv')
+#trips5 <- read_csv('202105-divvy-tripdata.csv')
+#trips6 <- read_csv('202106-divvy-tripdata.csv')
+#trips7 <- read_csv('202107-divvy-tripdata.csv')
+#trips8 <- read_csv('202108-divvy-tripdata.csv')
+#trips9 <- read_csv('202109-divvy-tripdata.csv')
+#trips10 <- read_csv('202110-divvy-tripdata.csv')
+#trips11 <- read_csv('202111-divvy-tripdata.csv')
+#trips12 <- read_csv('202112-divvy-tripdata.csv')
+
+halftrips <- merge(trips, trips2)
+
+
+```
+
+
+
+### Pequeno resumo dos dados
+
+```{r working}
+trips
+```
+
+
+
+### Verificando uso de bikes dos ciclistas
+
+```{r charts}
+
+ggplot(trips) + geom_bar(mapping= aes(x=member_casual, fill=rideable_type))
+
+eletric_total <- trips %>%
+  filter(rideable_type=='electric_bike')
+
+classic_total <- trips %>%
+  filter(rideable_type=='classic_bike')
+  
+dk_casual <- trips %>%
+  filter(rideable_type=='docked_bike' & member_casual=='casual')
+
+
+dk_num  <- count(dk_casual)
+ele_num  <- count(eletric_total)
+class_num  <- count(classic_total)
+
+bikes_client <- data.frame(class_num, ele_num, dk_num)
+
+colnames(bikes_client)[3] <- 'Bikes atracadas nos membros casuais'
+colnames(bikes_client)[2] <- 'Total de bikes eletricas'
+colnames(bikes_client)[1] <- 'Total de bikes classicas'
+
+
+```
+
+
+
+* Observamos que membros nao possuem bikes paradas
+
+
+### Tabela de número total de bikes por tipo
+```{r charts insight 2}
+bikes_client
+
+
+ggplot(trips) + geom_bar(mapping= aes(x=rideable_type, fill=member_casual))
+
+
+```
+```{r}
+
+#here <- left(ended_at, 6)
+
+
+trips
+
+```
+
+* Aqui confirmamos que somente usuários casuais possuem bicicletas atracadas
+
+
+
+### Trabalho de formulação e operações com datas
+
+```{r working date}
+datainf <- trips %>%
+  mutate(tempo_mins = as.numeric((ymd_hms(trips$ended_at) - ymd_hms(trips$started_at)) / 60)) 
+
+
+dataweek <- datainf %>% 
+  mutate(day =  as.character(wday(ymd_hms(trips$ended_at))))
+
+weekdays<-table(dataweek$day)
+weekdays
+```
+Frequência por dia da semana
+````{r }
+dataweek1 = dataweek
+table(dataweek1$day)
+#View(dataweek1)
+
+
+ggplot(dataweek1) + geom_bar(mapping = aes(x=day, fill=rideable_type)) +
+labs(x="Dias da Semana") +scale_x_discrete(labels = c("Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado" ))
+
+
+```
+
+## Relacionando duração de corrida por dia da semana
+### Corridas com menos de duas horas
+
+```{r col perdays}
+dt = ymd_hms(trips$started_at)
+
+dataweek1 <- dataweek %>%
+  filter(tempo_mins <= 180)
+ggplot(dataweek1) + geom_jitter(mapping=aes(x=tempo_mins, y=day, color=member_casual)) +
+   xlab("Tempo de corrida em minutos") +
+  ylab("Dia da semana") +
+  scale_y_discrete(labels = c("Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado" ))
+```
+
+
+### Corridas de duas a quatro horas
+
+```{r m}
+
+dataweek2 <- dataweek %>%
+  filter(tempo_mins >= 180 & tempo_mins <=360)
+ggplot(dataweek2) + geom_jitter(mapping=aes(x=tempo_mins, y=day, color=member_casual)) +
+   xlab("Tempo de corrida em minutos") + ylab("Dia da semana") +
+   scale_y_discrete(labels = c("Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado" ))
+
+
+```
+
+
+### Corridas acima de quatro horas
+```{r }
+
+
+dataweek3 <- dataweek %>%
+  filter(tempo_mins >= 360 )
+ggplot(dataweek3) + geom_jitter(mapping=aes(x=tempo_mins, y=day, color=member_casual)) +
+  xlab("Tempo de corrida em minutos") + ylab("Dia da semana") +
+  scale_y_discrete(labels = c("Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado" ))
+
+
+
+
+
+
+```
